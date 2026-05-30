@@ -20,11 +20,11 @@ from pipeline import config, sheets  # noqa: E402
 st.set_page_config(page_title="Sunsynk", layout="wide", page_icon="⚡")
 
 WINDOWS = {
-    "1 hour": 12,
-    "6 hours": 72,
-    "24 hours": 288,
-    "7 days": 2016,
-    "30 days": 8640,
+    "1 hour": 4,
+    "6 hours": 24,
+    "24 hours": 96,
+    "7 days": 672,
+    "30 days": 2880,
 }
 TZ = "Africa/Johannesburg"
 NON_NUMERIC = {"inverter_sn", "model", "sw_ver", "hw_ver", "hmi_ver", "updated_at"}
