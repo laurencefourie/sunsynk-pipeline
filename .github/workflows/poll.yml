@@ -5,7 +5,7 @@ on:
     # Every 15 min offset to :02/:17/:32/:47. Free-tier GitHub Actions
     # throttles 5-min cron heavily; 15 min is the sweet spot for reliable
     # scheduled runs without losing analytical resolution.
-    - cron: "2-59/15 * * * *"
+    - cron: "2,17,32,47 * * * *"
   workflow_dispatch: {}
 
 permissions:
