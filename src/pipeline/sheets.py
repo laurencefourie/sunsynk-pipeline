@@ -42,6 +42,25 @@ def _row_values(snapshot: dict[str, Any], tab: str, header: list[str]) -> list[A
     return [full.get(col) for col in header]
 
 
+def read_recent(ss: gspread.Spreadsheet, tab: str, last_n: int) -> list[dict[str, Any]]:
+    """Last `last_n` rows of a single tab as a list of {column: value} dicts.
+    Returns an empty list if the tab is missing or has only a header.
+    Rows are returned oldest-first so analysis can iterate naturally.
+    """
+    try:
+        ws = ss.worksheet(tab)
+    except gspread.WorksheetNotFound:
+        return []
+    rows = ws.get_all_values()
+    if len(rows) < 2:
+        return []
+    header = rows[0]
+    data = rows[1:]
+    if last_n > 0:
+        data = data[-last_n:]
+    return [{h: v for h, v in zip(header, r, strict=False)} for r in data]
+
+
 def read_tails(ss: gspread.Spreadsheet) -> dict[str, dict[str, Any] | None]:
     """Last row of each tab, as {column_name: value}. None if tab is empty or missing."""
     tails: dict[str, dict[str, Any] | None] = {}

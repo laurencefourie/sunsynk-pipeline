@@ -38,6 +38,19 @@ def _cmd_pull(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_read(args: argparse.Namespace) -> int:
+    cfg = config.load(require_sheets=True)
+    ss = sheets.open_sheet(cfg.google_service_account_info, cfg.google_sheet_id)
+    tabs = [args.tab] if args.tab else list(fetch.TABS)
+    result = {tab: sheets.read_recent(ss, tab, args.last) for tab in tabs}
+    if args.json or args.tab is None:
+        _print_json(result)
+    else:
+        for row in result[args.tab]:
+            print(", ".join(f"{k}={v}" for k, v in row.items()))
+    return 0
+
+
 def _cmd_sheet_tail(args: argparse.Namespace) -> int:
     cfg = config.load(require_sheets=True)
     ss = sheets.open_sheet(cfg.google_service_account_info, cfg.google_sheet_id)
@@ -69,6 +82,21 @@ def main(argv: list[str] | None = None) -> int:
     p_tail = sub.add_parser("sheet-tail", help="Show the last row of each tab")
     p_tail.add_argument("--json", action="store_true", help="Emit tails as JSON on stdout")
     p_tail.set_defaults(func=_cmd_sheet_tail)
+
+    p_read = sub.add_parser("read", help="Read the last N rows of one or all tabs")
+    p_read.add_argument(
+        "--tab",
+        choices=list(fetch.TABS),
+        help="Limit to a single tab; if omitted, returns all tabs as JSON",
+    )
+    p_read.add_argument(
+        "--last",
+        type=int,
+        default=288,
+        help="Number of recent rows to return (default 288 = 1 day @ 5min)",
+    )
+    p_read.add_argument("--json", action="store_true", help="Force JSON output")
+    p_read.set_defaults(func=_cmd_read)
 
     args = parser.parse_args(argv)
     try:
