@@ -36,9 +36,10 @@ def _spreadsheet():
     return sheets.open_sheet(cfg.google_service_account_info, cfg.google_sheet_id)
 
 
-@st.cache_data(ttl=300)
-def load_tab(tab: str, last_n: int) -> pd.DataFrame:
-    rows = sheets.read_recent(_spreadsheet(), tab, last_n)
+TABS = ("battery", "grid", "pv", "load", "inverter")
+
+
+def _to_df(rows: list[dict]) -> pd.DataFrame:
     if not rows:
         return pd.DataFrame()
     df = pd.DataFrame(rows)
@@ -48,6 +49,12 @@ def load_tab(tab: str, last_n: int) -> pd.DataFrame:
         if col not in NON_NUMERIC and col not in ("timestamp_utc", "timestamp_sast"):
             df[col] = pd.to_numeric(df[col], errors="coerce")
     return df.set_index("timestamp_sast")
+
+
+@st.cache_data(ttl=300)
+def load_all_tabs(last_n: int) -> dict[str, pd.DataFrame]:
+    raw = sheets.read_recent_batch(_spreadsheet(), list(TABS), last_n)
+    return {tab: _to_df(raw.get(tab, [])) for tab in TABS}
 
 
 def metric(col, label: str, value, unit: str = "", fmt: str = "{:.0f}") -> None:
@@ -68,11 +75,10 @@ if st.sidebar.button("Refresh"):
 
 # --- Load ---
 try:
-    battery = load_tab("battery", last_n)
-    grid = load_tab("grid", last_n)
-    pv = load_tab("pv", last_n)
-    load = load_tab("load", last_n)
-    inverter = load_tab("inverter", last_n)
+    frames = load_all_tabs(last_n)
+    battery, grid, pv, load, inverter = (
+        frames["battery"], frames["grid"], frames["pv"], frames["load"], frames["inverter"],
+    )
 except config.MissingEnvError as e:
     st.error(f"Configuration error: {e}")
     st.stop()

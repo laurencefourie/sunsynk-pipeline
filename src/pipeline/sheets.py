@@ -42,6 +42,16 @@ def _row_values(snapshot: dict[str, Any], tab: str, header: list[str]) -> list[A
     return [full.get(col) for col in header]
 
 
+def _shape_rows(rows: list[list[str]], last_n: int) -> list[dict[str, Any]]:
+    if len(rows) < 2:
+        return []
+    header = rows[0]
+    data = rows[1:]
+    if last_n > 0:
+        data = data[-last_n:]
+    return [{h: v for h, v in zip(header, r, strict=False)} for r in data]
+
+
 def read_recent(ss: gspread.Spreadsheet, tab: str, last_n: int) -> list[dict[str, Any]]:
     """Last `last_n` rows of a single tab as a list of {column: value} dicts.
     Returns an empty list if the tab is missing or has only a header.
@@ -51,14 +61,23 @@ def read_recent(ss: gspread.Spreadsheet, tab: str, last_n: int) -> list[dict[str
         ws = ss.worksheet(tab)
     except gspread.WorksheetNotFound:
         return []
-    rows = ws.get_all_values()
-    if len(rows) < 2:
-        return []
-    header = rows[0]
-    data = rows[1:]
-    if last_n > 0:
-        data = data[-last_n:]
-    return [{h: v for h, v in zip(header, r, strict=False)} for r in data]
+    return _shape_rows(ws.get_all_values(), last_n)
+
+
+def read_recent_batch(
+    ss: gspread.Spreadsheet, tabs: list[str], last_n: int
+) -> dict[str, list[dict[str, Any]]]:
+    """Like read_recent but fetches all `tabs` in a single Sheets API call.
+    Missing tabs are returned as an empty list. One read API call total
+    instead of one per tab — needed to stay under the 60 reads/min/user
+    free-tier limit when the dashboard renders all five tabs at once.
+    """
+    resp = ss.values_batch_get([f"{t}!A:ZZ" for t in tabs])
+    value_ranges = resp.get("valueRanges", [])
+    out: dict[str, list[dict[str, Any]]] = {}
+    for tab, vr in zip(tabs, value_ranges, strict=False):
+        out[tab] = _shape_rows(vr.get("values", []), last_n)
+    return out
 
 
 def read_tails(ss: gspread.Spreadsheet) -> dict[str, dict[str, Any] | None]:
