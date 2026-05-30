@@ -19,13 +19,13 @@ Use the project's CLI, not gspread or other libraries directly. The commands hon
 uv run sunsynk read --last 2016 --json
 ```
 
-Default cadence is 15 min, so:
-- `--last 4` = last hour
-- `--last 96` = last day
-- `--last 672` = last week
-- `--last 2880` = last month
+Default cadence is 5 min, so:
+- `--last 12` = last hour
+- `--last 288` = last day
+- `--last 2016` = last week
+- `--last 8640` = last month
 
-Pick a window that matches what the user asked for. If they didn't specify, default to **one week** (`--last 672`) — enough for diurnal patterns to be visible without overwhelming the analysis. If the sheet doesn't have that much yet, the command returns whatever exists; check the row count and note it in the report.
+Pick a window that matches what the user asked for. If they didn't specify, default to **one week** (`--last 2016`) — enough for diurnal patterns to be visible without overwhelming the analysis. If the sheet doesn't have that much yet, the command returns whatever exists; check the row count and note it in the report.
 
 For deep dives on one tab:
 

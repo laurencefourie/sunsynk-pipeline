@@ -92,8 +92,8 @@ def main(argv: list[str] | None = None) -> int:
     p_read.add_argument(
         "--last",
         type=int,
-        default=96,
-        help="Number of recent rows to return (default 96 = 1 day @ 15min)",
+        default=288,
+        help="Number of recent rows to return (default 288 = 1 day @ 5min)",
     )
     p_read.add_argument("--json", action="store_true", help="Force JSON output")
     p_read.set_defaults(func=_cmd_read)

@@ -16,7 +16,7 @@ A Python script that pulls telemetry from the Sunsynk Connect cloud API, appends
 ## Running
 
 - Run anything with `uv run python -m <module>` so it uses the project's venv.
-- The entry point is intended to run as a one-shot per invocation (fetch → append → exit), driven by **GitHub Actions cron**, not as a long-lived daemon. Don't add scheduling logic inside the script itself.
+- The entry point is intended to run as a one-shot per invocation (fetch → append → exit), driven by **cron on an always-on Ubuntu server** (GitHub Actions schedule triggers proved unreliable on free public repos), not as a long-lived daemon. Don't add scheduling logic inside the script itself. The Actions workflow keeps `workflow_dispatch` for manual one-off triggers.
 
 ## Secrets
 
@@ -43,4 +43,4 @@ When asked to analyse, frame findings around **inverter settings the user can ch
 ## Repo etiquette
 
 - This is a personal repo; no PR review process. Commit directly to `main` unless asked otherwise.
-- Keep the Actions workflow file minimal — cron schedule, checkout, `uv sync`, `uv run` the entry point. Don't add matrix builds or multi-Python testing.
+- Keep the Actions workflow file minimal — `workflow_dispatch` trigger, checkout, `uv sync`, `uv run` the entry point. Don't add matrix builds or multi-Python testing.
