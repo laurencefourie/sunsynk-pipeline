@@ -17,6 +17,12 @@ A Python script that pulls telemetry from the Sunsynk Connect cloud API, appends
 
 - Run anything with `uv run python -m <module>` so it uses the project's venv.
 - The entry point is intended to run as a one-shot per invocation (fetch → append → exit), driven by **cron on an always-on Ubuntu server** (GitHub Actions schedule triggers proved unreliable on free public repos), not as a long-lived daemon. Don't add scheduling logic inside the script itself. The Actions workflow keeps `workflow_dispatch` for manual one-off triggers.
+- Cadence is **every 5 minutes**. Anything that assumes row spacing (CLI `--last` default, dashboard `WINDOWS`, analyser skill) must match this; if you change the cron, change those together.
+
+## Deployment
+
+- Pipeline cron and Streamlit dashboard both run on the same Ubuntu server. The cron pulls Sunsynk → Sheets; the dashboard reads from the same Sheet and serves on port 8501 via a systemd unit. The two are independent — pulling new code requires `git pull` on the server, and a `sudo systemctl restart sunsynk-dashboard` only if `app.py` (or imports it uses) changed.
+- Don't bake the server's paths, IP, or systemd unit names into the repo — they're environment, not code. Specifics live in the per-project memory under `deployment-topology`.
 
 ## Secrets
 
