@@ -48,10 +48,16 @@ def _pv_row(p) -> dict[str, Any]:
     }
 
 
-def _load_row(o) -> dict[str, Any]:
+def _load_row(o, flow) -> dict[str, Any]:
+    # power_w is the total household load shown in the Sunsynk app. The
+    # /realtime/output endpoint's `pac` only covers the inverter's protected
+    # (EPS) output port, so it understates the real load by whatever is drawn
+    # on the non-essential/grid side. The plant energy-flow endpoint's
+    # `loadOrEpsPower` is the figure the app displays, so we use that here.
+    # freq/voltage/current stay sourced from the output endpoint (measured).
     vip = o.vip[0] if o.vip else None
     return {
-        "power_w": o.pac,
+        "power_w": flow.get("loadOrEpsPower"),
         "freq_hz": o.fac,
         "voltage_v": vip.voltage if vip else None,
         "current_a": vip.current if vip else None,
@@ -73,6 +79,23 @@ def _inverter_row(inv) -> dict[str, Any]:
     }
 
 
+async def _get_plant_flow(client: SunsynkClient, plant_id) -> dict[str, Any]:
+    """Fetch the plant energy-flow snapshot (the app's flow diagram source).
+
+    Not wrapped by the sunsynk library, so we issue the authenticated GET
+    against the client's own session/token rather than reaching into its
+    private internals.
+    """
+    url = f"{client.base_url}/api/v1/plant/energy/{plant_id}/flow"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {client.access_token}",
+    }
+    resp = await client.session.get(url, headers=headers, timeout=20)
+    body = await resp.json()
+    return body.get("data", {}) or {}
+
+
 async def fetch_snapshots(username: str, password: str) -> list[dict[str, Any]]:
     """Returns one snapshot dict per inverter. Each snapshot has shape:
         {"timestamp_utc": ..., "inverter_sn": ..., "rows": {tab: {col: val}}}
@@ -89,6 +112,7 @@ async def fetch_snapshots(username: str, password: str) -> list[dict[str, Any]]:
             grid = await client.get_inverter_realtime_grid(sn)
             pv = await client.get_inverter_realtime_input(sn)
             load = await client.get_inverter_realtime_output(sn)
+            flow = await _get_plant_flow(client, inv.plant.id) if inv.plant else {}
             snapshots.append({
                 "timestamp_utc": timestamp,
                 "inverter_sn": sn,
@@ -96,7 +120,7 @@ async def fetch_snapshots(username: str, password: str) -> list[dict[str, Any]]:
                     "battery": _battery_row(battery),
                     "grid": _grid_row(grid),
                     "pv": _pv_row(pv),
-                    "load": _load_row(load),
+                    "load": _load_row(load, flow),
                     "inverter": _inverter_row(inv),
                 },
             })
